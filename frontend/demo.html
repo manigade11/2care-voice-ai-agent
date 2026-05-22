@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>2Care Voice AI Demo</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f7fb;
+      margin: 0;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 20px auto;
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+    }
+
+    h2 {
+      margin-top: 0;
+      color: #1d3557;
+    }
+
+    input, textarea, button {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      margin-bottom: 10px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+    }
+
+    button {
+      background: #1d3557;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #16324f;
+    }
+
+    #status {
+      font-weight: bold;
+      margin: 10px 0;
+    }
+
+    #log {
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 220px;
+      padding: 12px;
+      border-radius: 8px;
+      white-space: pre-wrap;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>2Care Voice AI Agent Demo</h2>
+
+    <input id="sessionId" value="session_101" placeholder="Session ID" />
+    <input id="patientId" value="patient_001" placeholder="Patient ID" />
+    <textarea id="messageInput" placeholder="Type your message">Book appointment with cardiologist tomorrow at 10:30</textarea>
+
+    <button id="connectBtn">Connect</button>
+    <button id="sendBtn">Send Message</button>
+
+    <div id="status">Disconnected</div>
+    <div id="log"></div>
+  </div>
+
+  <script>
+    let socket = null;
+
+    function log(message) {
+      const logBox = document.getElementById("log");
+      logBox.textContent += message + "\n\n";
+      logBox.scrollTop = logBox.scrollHeight;
+    }
+
+    document.getElementById("connectBtn").addEventListener("click", function () {
+      const wsUrl = "ws://127.0.0.1:8000/api/ws/voice";
+      log("Trying to connect: " + wsUrl);
+
+      socket = new WebSocket(wsUrl);
+
+      socket.onopen = function () {
+        document.getElementById("status").textContent = "Connected";
+        log("Connected successfully.");
+      };
+
+      socket.onmessage = function (event) {
+        log("Server response:\n" + event.data);
+      };
+
+      socket.onerror = function (event) {
+        document.getElementById("status").textContent = "Error";
+        log("WebSocket error. Check browser console.");
+        console.error("WebSocket error:", event);
+      };
+
+      socket.onclose = function (event) {
+        document.getElementById("status").textContent = "Disconnected";
+        log("Connection closed. Code: " + event.code + ", Reason: " + (event.reason || "No reason"));
+        console.log("WebSocket closed:", event);
+      };
+    });
+
+    document.getElementById("sendBtn").addEventListener("click", function () {
+      if (!socket || socket.readyState !== WebSocket.OPEN) {
+        log("WebSocket is not connected.");
+        return;
+      }
+
+      const payload = {
+        session_id: document.getElementById("sessionId").value.trim(),
+        patient_id: document.getElementById("patientId").value.trim(),
+        text: document.getElementById("messageInput").value.trim()
+      };
+
+      socket.send(JSON.stringify(payload));
+      log("Sent:\n" + JSON.stringify(payload, null, 2));
+    });
+  </script>
+</body>
+</html>

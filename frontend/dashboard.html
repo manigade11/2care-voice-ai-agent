@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>2Care.ai Clinical Voice AI Agent Dashboard</title>
+
+  <link href="https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css" />
+  <style>
+    /* Premium Glassmorphic Styles */
+    :root {
+      --stt-color: #3b82f6;
+      --lang-color: #8b5cf6;
+      --agent-color: #10b981;
+      --tts-color: #f59e0b;
+      --total-color: #ef4444;
+    }
+
+    body {
+      background: 
+        radial-gradient(circle at top right, rgba(79, 152, 163, 0.12), transparent 40%),
+        radial-gradient(circle at bottom left, rgba(245, 158, 11, 0.05), transparent 40%),
+        var(--color-bg);
+    }
+
+    .panel-card {
+      backdrop-filter: blur(16px);
+      background: color-mix(in srgb, var(--color-surface) 75%, transparent 25%);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    /* Wave visualizer animation */
+    .wave-visualizer {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      height: 24px;
+      margin-left: var(--space-3);
+    }
+
+    .wave-bar {
+      width: 4px;
+      height: 100%;
+      background: var(--color-primary);
+      border-radius: 2px;
+      animation: wave 1.2s ease-in-out infinite alternate;
+    }
+
+    .wave-bar.bar-1 { animation-delay: 0.1s; height: 30%; }
+    .wave-bar.bar-2 { animation-delay: 0.3s; height: 75%; }
+    .wave-bar.bar-3 { animation-delay: 0.0s; height: 95%; }
+    .wave-bar.bar-4 { animation-delay: 0.4s; height: 50%; }
+    .wave-bar.bar-5 { animation-delay: 0.2s; height: 80%; }
+
+    @keyframes wave {
+      0% { transform: scaleY(0.25); }
+      100% { transform: scaleY(1); }
+    }
+
+    /* Latency Chart HSL styles */
+    .latency-chart-container {
+      display: grid;
+      gap: 0.75rem;
+      margin-top: var(--space-2);
+    }
+
+    .latency-bar-row {
+      display: grid;
+      grid-template-columns: 140px 1fr 60px;
+      align-items: center;
+      gap: 0.75rem;
+      font-size: var(--text-xs);
+    }
+
+    .bar-label {
+      font-weight: 500;
+      color: var(--color-text-muted);
+    }
+
+    .bar-outer {
+      background: rgba(255, 255, 255, 0.06);
+      height: 12px;
+      border-radius: 6px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.03);
+    }
+
+    .bar-inner {
+      height: 100%;
+      border-radius: 6px;
+      width: 0%;
+      transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .stt-color { background: var(--stt-color); }
+    .lang-color { background: var(--lang-color); }
+    .agent-color { background: var(--agent-color); }
+    .tts-color { background: var(--tts-color); }
+    .total-color { background: var(--total-color); }
+
+    .bar-time {
+      font-weight: 700;
+      text-align: right;
+    }
+
+    .total-row {
+      border-top: 1px solid var(--color-divider);
+      padding-top: 0.5rem;
+      margin-top: 0.25rem;
+      font-weight: 700;
+    }
+
+    .voice-controls-row {
+      display: flex;
+      align-items: center;
+      margin-bottom: var(--space-4);
+      flex-wrap: wrap;
+      gap: var(--space-2);
+    }
+
+    .voice-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+
+    .recording-status-indicator {
+      font-size: var(--text-xs);
+      font-weight: 700;
+      color: var(--color-error);
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 0.5; }
+      50% { opacity: 1; }
+      100% { opacity: 0.5; }
+    }
+
+    .schedules-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: var(--text-xs);
+      margin-top: var(--space-3);
+    }
+
+    .schedules-table th, 
+    .schedules-table td {
+      padding: 0.5rem 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid var(--color-divider);
+    }
+
+    .schedules-table th {
+      font-weight: 700;
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .schedules-table tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to content</a>
+
+  <header class="topbar">
+    <div class="brand-wrap">
+      <div class="brand-mark" aria-label="2Care.ai logo">
+        <svg viewBox="0 0 48 48" role="img" aria-hidden="true">
+          <rect x="6" y="6" width="36" height="36" rx="12" fill="currentColor" opacity="0.12"></rect>
+          <path d="M16 24c0-4.5 3.5-8 8-8 3.8 0 6.8 2.4 7.7 5.7h-4.3c-.7-1.1-2-1.7-3.4-1.7-2.5 0-4.4 1.9-4.4 4s1.9 4 4.4 4c1.4 0 2.7-.6 3.4-1.7h4.3c-.9 3.3-3.9 5.7-7.7 5.7-4.5 0-8-3.5-8-8Z" fill="currentColor"></path>
+        </svg>
+      </div>
+      <div>
+        <p class="eyebrow">Real-Time Multilingual Voice AI Agent</p>
+        <h1>2Care.ai Clinic Booking Dashboard</h1>
+      </div>
+    </div>
+
+    <div class="topbar-actions">
+      <button id="themeToggle" class="icon-btn" aria-label="Toggle theme" data-theme-toggle>
+        <span>◐</span>
+      </button>
+      <button id="refreshStatusBtn" class="secondary-btn">Refresh DB</button>
+    </div>
+  </header>
+
+  <main id="main-content" class="page-shell">
+    <section class="hero-panel">
+      <div>
+        <p class="section-label">Live Clinic Console</p>
+        <h2>Conversational Clinical Voice AI Agent</h2>
+        <p class="hero-copy">
+          Book, reschedule, or cancel clinical appointments instantly with real-time speech. Speak or type in <strong>English</strong>, <strong>Hindi (हिन्दी)</strong>, or <strong>Tamil (தமிழ்)</strong>. 
+          The agent automatically detects your language, schedules with availability conflict verification, and talks back!
+        </p>
+      </div>
+
+      <div class="status-grid">
+        <article class="metric-card">
+          <span class="metric-label">API Health</span>
+          <strong id="apiHealthValue">Checking...</strong>
+          <small id="apiHealthHint">Waiting for backend</small>
+        </article>
+
+        <article class="metric-card">
+          <span class="metric-label">WebSocket Connection</span>
+          <strong id="wsStatusValue">Disconnected</strong>
+          <small id="wsStatusHint">Real-time gateway closed</small>
+        </article>
+
+        <article class="metric-card">
+          <span class="metric-label">End-to-End Latency</span>
+          <strong id="latencyValue">-- ms</strong>
+          <small id="latencyHint">Target requirement: &lt; 450ms</small>
+        </article>
+
+        <article class="metric-card">
+          <span class="metric-label">Last Active Booking</span>
+          <strong id="lastAppointmentValue">None</strong>
+          <small id="lastAppointmentHint">No active session</small>
+        </article>
+      </div>
+    </section>
+
+    <section class="dashboard-grid">
+      <aside class="left-column">
+        <article class="panel-card">
+          <div class="panel-head">
+            <h3>Gateway Configuration</h3>
+            <span class="chip chip-neutral">Config</span>
+          </div>
+
+          <div class="form-grid">
+            <div class="field">
+              <label for="apiBaseUrl">API base URL</label>
+              <input id="apiBaseUrl" type="text" value="http://127.0.0.1:8000/api" />
+            </div>
+
+            <div class="field">
+              <label for="wsUrl">WebSocket URL</label>
+              <input id="wsUrl" type="text" value="ws://127.0.0.1:8000/api/ws/voice" />
+            </div>
+
+            <div class="field">
+              <label for="sessionId">Session ID</label>
+              <input id="sessionId" type="text" value="demo-session-001" />
+            </div>
+          </div>
+
+          <div class="action-row">
+            <button id="connectWsBtn" class="primary-btn">Connect Gateway</button>
+            <button id="disconnectWsBtn" class="ghost-btn">Disconnect</button>
+          </div>
+        </article>
+
+        <article class="panel-card">
+          <div class="panel-head">
+            <h3>Outbound Call Simulator</h3>
+            <span class="chip chip-warning">Outbound Campaign</span>
+          </div>
+          <p class="hero-copy" style="margin-top: 0; margin-bottom: var(--space-4); font-size: var(--text-xs);">
+            Simulate outbound proactive calling campaigns (appointment/vaccination reminders). Initiates an AI-call session, pre-populating session history in Amit Sharma's, Karthik's, or Sarah's preferred language.
+          </p>
+          <div class="form-grid compact-form">
+            <div class="field">
+              <label for="campaignPatientId">Target Patient Profile</label>
+              <select id="campaignPatientId">
+                <option value="patient_001">Amit Sharma (patient_001 - Hindi)</option>
+                <option value="patient_002">Karthik Subramanian (patient_002 - Tamil)</option>
+                <option value="patient_003">Sarah Connor (patient_003 - English)</option>
+              </select>
+            </div>
+            <button id="triggerCampaignBtn" class="primary-btn full-width" style="background:#d97706; border-color:#d97706;">📞 Initiate Campaign Call</button>
+          </div>
+        </article>
+
+        <article class="panel-card">
+          <div class="panel-head">
+            <h3>Manual Booking (REST API)</h3>
+            <span class="chip chip-success">Create</span>
+          </div>
+
+          <form id="bookForm" class="form-grid">
+            <div class="field">
+              <label for="bookPatientId">Patient ID</label>
+              <select id="bookPatientId">
+                <option value="patient_001">Amit Sharma (patient_001 - Hindi)</option>
+                <option value="patient_002">Karthik Subramanian (patient_002 - Tamil)</option>
+                <option value="patient_003">Sarah Connor (patient_003 - English)</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="bookDoctorId">Doctor ID</label>
+              <select id="bookDoctorId">
+                <option value="dr_cardio_1">dr_cardio_1 (Dr. Cardio - Cardiologist)</option>
+                <option value="dr_derma_1">dr_derma_1 (Dr. Derma - Dermatologist)</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="bookDate">Date</label>
+              <input id="bookDate" type="date" required />
+            </div>
+
+            <div class="field">
+              <label for="bookTime">Time</label>
+              <input id="bookTime" type="time" required />
+            </div>
+
+            <div class="field">
+              <label for="bookLanguage">Language</label>
+              <select id="bookLanguage">
+                <option value="en">English</option>
+                <option value="hi">Hindi (हिन्दी)</option>
+                <option value="ta">Tamil (தமிழ்)</option>
+              </select>
+            </div>
+
+            <button type="submit" class="primary-btn full-width">Register Appointment</button>
+          </form>
+        </article>
+
+        <article class="panel-card">
+          <div class="panel-head">
+            <h3>Modify Appointment</h3>
+            <span class="chip chip-warning">Manage</span>
+          </div>
+
+          <form id="rescheduleForm" class="form-grid compact-form">
+            <div class="field">
+              <label for="rescheduleAppointmentId">Appointment ID</label>
+              <input id="rescheduleAppointmentId" type="text" placeholder="Paste booking UUID" required />
+            </div>
+
+            <div class="field">
+              <label for="rescheduleDate">New Date</label>
+              <input id="rescheduleDate" type="date" required />
+            </div>
+
+            <div class="field">
+              <label for="rescheduleTime">New Time</label>
+              <input id="rescheduleTime" type="time" required />
+            </div>
+
+            <button type="submit" class="secondary-btn full-width">Reschedule Slot</button>
+          </form>
+
+          <form id="cancelForm" class="form-grid compact-form top-gap">
+            <div class="field">
+              <label for="cancelAppointmentId">Appointment ID to Cancel</label>
+              <input id="cancelAppointmentId" type="text" placeholder="Paste booking UUID" required />
+            </div>
+
+            <button type="submit" class="danger-btn full-width">Cancel Booking</button>
+          </form>
+        </article>
+      </aside>
+
+      <section class="right-column">
+        <article class="panel-card large-panel">
+          <div class="panel-head">
+            <h3>Live Voice Agent Endpoint</h3>
+            <span id="liveWsBadge" class="chip chip-neutral">Offline</span>
+          </div>
+
+          <!-- Real-Time Voice Recording Controls -->
+          <div class="voice-controls-row">
+            <button type="button" id="startRecordBtn" class="primary-btn voice-btn" style="background:#10b981;">
+              <span>🎤</span> Start Recording Voice
+            </button>
+            <button type="button" id="stopRecordBtn" class="danger-btn voice-btn" style="display:none; background:#ef4444;">
+              <span>🛑</span> Stop & Send Speech
+            </button>
+            
+            <div id="recordingWave" class="wave-visualizer" style="display:none;">
+              <span class="wave-bar bar-1"></span>
+              <span class="wave-bar bar-2"></span>
+              <span class="wave-bar bar-3"></span>
+              <span class="wave-bar bar-4"></span>
+              <span class="wave-bar bar-5"></span>
+              <span class="recording-status-indicator" style="margin-left: 8px;">RECORDING VOICE...</span>
+            </div>
+          </div>
+
+          <form id="agentMessageForm" class="agent-form">
+            <label class="sr-only" for="agentMessageInput">Type text message as alternative</label>
+            <textarea
+              id="agentMessageInput"
+              rows="3"
+              placeholder="Or type here... e.g. Book appointment with cardiologist tomorrow at 14:00"
+            ></textarea>
+
+            <div class="action-row">
+              <button type="submit" class="primary-btn">Send Text Query</button>
+              <button type="button" id="clearConversationBtn" class="ghost-btn">Clear Log</button>
+            </div>
+          </form>
+
+          <div class="log-section">
+            <div class="subhead">
+              <h4>Voice & Chat Interaction Log</h4>
+              <span class="mini-note">Newest first</span>
+            </div>
+            <div id="conversationLog" class="log-box" aria-live="polite"></div>
+          </div>
+
+          <div class="log-section">
+            <div class="subhead">
+              <h4>System Gateway Events</h4>
+              <span class="mini-note">JSON payloads</span>
+            </div>
+            <div id="systemLog" class="log-box system-log" aria-live="polite"></div>
+          </div>
+        </article>
+
+        <!-- Latency Breakdown Chart Card -->
+        <article class="panel-card">
+          <div class="panel-head">
+            <h3>Pipeline Latency Breakdown</h3>
+            <span class="chip chip-neutral">Performance Analyzer</span>
+          </div>
+          <div class="latency-chart-container">
+            <div class="latency-bar-row">
+              <span class="bar-label">Speech-to-Text (STT)</span>
+              <div class="bar-outer"><div id="sttBar" class="bar-inner stt-color" style="width: 0%;"></div></div>
+              <span id="sttTime" class="bar-time">0 ms</span>
+            </div>
+            <div class="latency-bar-row">
+              <span class="bar-label">Language Detect</span>
+              <div class="bar-outer"><div id="langBar" class="bar-inner lang-color" style="width: 0%;"></div></div>
+              <span id="langTime" class="bar-time">0 ms</span>
+            </div>
+            <div class="latency-bar-row">
+              <span class="bar-label">LLM Agent (Tools)</span>
+              <div class="bar-outer"><div id="agentBar" class="bar-inner agent-color" style="width: 0%;"></div></div>
+              <span id="agentTime" class="bar-time">0 ms</span>
+            </div>
+            <div class="latency-bar-row">
+              <span class="bar-label">Speech Synthesis (TTS)</span>
+              <div class="bar-outer"><div id="ttsBarChart" class="bar-inner tts-color" style="width: 0%;"></div></div>
+              <span id="ttsTime" class="bar-time">0 ms</span>
+            </div>
+            <div class="latency-bar-row total-row">
+              <span class="bar-label">Total Processing Time</span>
+              <div class="bar-outer"><div id="totalBar" class="bar-inner total-color" style="width: 0%;"></div></div>
+              <span id="totalTime" class="bar-time">0 ms</span>
+            </div>
+          </div>
+        </article>
+
+        <!-- Live Schedules Table -->
+        <article class="panel-card">
+          <div class="panel-head">
+            <h3>Registered Appointments & Doctor Calendars</h3>
+            <span class="chip chip-success">Live Database</span>
+          </div>
+          <p class="hero-copy" style="margin-top: 0; font-size: var(--text-xs);">
+            Active schedule allocations inside the booking engine database.
+          </p>
+          <table class="schedules-table">
+            <thead>
+              <tr>
+                <th>Booking ID</th>
+                <th>Patient</th>
+                <th>Doctor</th>
+                <th>Date</th>
+                <th>Time</th>
+                <th>Language</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="appointmentsTableBody">
+              <tr>
+                <td colspan="7" class="empty-state-note" style="text-align: center;">No appointments found. Refresh DB to sync.</td>
+              </tr>
+            </tbody>
+          </table>
+        </article>
+
+        <article class="panel-card">
+          <div class="panel-head">
+            <h3>API Debug Terminal</h3>
+            <span class="chip chip-neutral">JSON Response</span>
+          </div>
+
+          <pre id="apiResponseViewer" class="response-viewer">Waiting for transactions...</pre>
+        </article>
+      </section>
+    </section>
+  </main>
+
+  <!-- HTML5 Audio Element for playing agent speech response -->
+  <audio id="audioPlayer" style="display:none;"></audio>
+
+  <script src="./app.js"></script>
+</body>
+</html>
