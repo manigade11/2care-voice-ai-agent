@@ -1,6 +1,6 @@
 ## 2Care.ai: Real-Time Multilingual Voice AI Agent
 
-![System Architecture](docs/architecture.png)
+![System Architecture](docs/ARCHITECTURE_MAIN.png)
 
 A low-latency, agentic voice AI system designed for clinical appointment management. Built for performance, this system features a robust, event-driven architecture capable of handling multilingual patient interactions with sub-450ms turnaround times.
 
