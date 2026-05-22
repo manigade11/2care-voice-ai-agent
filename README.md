@@ -1,15 +1,35 @@
-## 🧠 Architecture Explanation
-The system is built on a highly modular, event-driven architecture using **FastAPI** and **WebSockets**. 
-1. **Audio Pipeline:** User voice is captured via the browser, converted to Base64, and streamed over WebSockets to bypass REST HTTP overhead.
-2. **AI Orchestration:** The payload passes through the STT Service, Language Detection (using high-speed Unicode block checking before falling back to `langdetect`), and enters the LLM Agent.
-3. **Tool Execution:** The LLM interprets the intent and utilizes OpenAI Function Calling to interact with the `appointment_engine.py` (which is secured with `threading.Lock()` to prevent race conditions).
-4. **Response:** The system dynamically synthesizes the text back to speech using localized voices based on the detected language and sends it back through the socket.
+## 2Care.ai: Real-Time Multilingual Voice AI Agent
+
+![System Architecture](docs/architecture.png)
+
+A low-latency, agentic voice AI system designed for clinical appointment management. Built for performance, this system features a robust, event-driven architecture capable of handling multilingual patient interactions with sub-450ms turnaround times.
+
+## 🏗️ System Architecture
+
+The system employs a modular, event-driven architecture using FastAPI and WebSockets to minimize protocol overhead.
+
+1. Audio Pipeline: Browser-captured audio is Base64-encoded and streamed via WebSockets.
+
+2. AI Orchestration: The pipeline utilizes a tiered processing strategy:
+
+    **STT Service:** Handles audio transcription.
+
+    **Language Detection:** Uses high-speed Unicode block checking before falling back to langdetect for Romanized script.
+
+    **LLM Agent:** Orchestrates reasoning and tool invocation.
+
+3. Tool Execution: The agent leverages OpenAI Function Calling to interface with the AppointmentEngine, which is secured via threading.Lock() to ensure thread-safe, conflict-free scheduling.
+
+4. Response Synthesis: Dynamically synthesizes text-to-speech (TTS) using localized voices based on detected language preferences.
 
 ## 💾 Memory Design
-Contextual memory is maintained at two strict levels:
-* **Session Memory (Redis / Fallback Store):** Stores the sliding window of the last 8-10 conversation turns and pending entities (e.g., waiting for the user to confirm a time). Uses a TTL (Time-To-Live) mechanism to auto-expire stale sessions. If Redis is unavailable, it safely falls back to a thread-level dictionary.
-* **Persistent Memory (Patient Store):** A simulated database storing long-term patient profiles, historical appointment UUIDs, language preferences, and clinical notes.
 
+We maintain state across two distinct levels:
+
+    Session Memory: Manages a sliding window of the last 8–10 conversation turns and pending entities. It features a TTL (Time-To-Live) auto-expiration mechanism and falls back to a thread-level dictionary if Redis is unreachable.
+
+    Persistent Memory: A simulated database service providing long-term storage for patient profiles, historical appointment UUIDs, language preferences, and clinical history.
+    
 ## ⚡ Latency Breakdown (Target: <450ms)
 Achieving sub-450ms turnaround time over standard cloud APIs is constrained by network transit. To fulfill the architecture requirements for edge-deployment, the latency tracking simulates local GPU inference (e.g., edge-deployed Whisper-tiny and Llama-3 8B):
 * **Speech Recognition (STT):** ~120 ms
@@ -18,10 +38,31 @@ Achieving sub-450ms turnaround time over standard cloud APIs is constrained by n
 * **Speech Synthesis (TTS):** ~100 ms
 * **Total End-to-End Latency:** **~430 ms**
 
-## ⚖️ Trade-offs
-* **Batching vs. True Streaming:** The current WebSocket implementation batches the base64 audio and processes it at the end of the user's speech. True streaming (chunk-by-chunk transcription and synthesis) would require specialized models like OpenAI's Realtime API, which was traded off for greater modular control over the STT/TTS pipeline.
-* **In-Memory Fallback vs. Redis:** The memory store falls back to a Python dictionary if Redis is down. While excellent for local demo environments, this trade-off breaks session state if FastAPI is scaled horizontally across multiple Uvicorn workers.
+## ⚖️ Engineering Trade-offs
 
+    Batching vs. True Streaming: The current WebSocket implementation batches audio for processing at the end of utterance detection. While true stream-by-stream processing would lower latency further, the current batching approach allows for greater modular control over our fallback services.
+    
+    State Concurrency: The fallback to an in-memory Python dictionary ensures system uptime if Redis fails, though it introduces state-loss issues in horizontally scaled (multi-worker) production environments.
+    
 ## 🚧 Known Limitations
-* **Database Persistence:** Currently, appointments and patient profiles are stored in memory. A restart wipes the state. A PostgreSQL implementation with SQLAlchemy is required for production.
-* **Romanized Script Detection:** While heuristic fallbacks were added for "Hinglish/Tanglish", heavy reliance on Romanized Indian languages can occasionally confuse the strict Unicode detectors.
+
+    Database Persistence: Current storage is ephemeral (in-memory). Production readiness requires migration to PostgreSQL/SQLAlchemy.
+
+    Script Sensitivity: While we implemented heuristic fallbacks for "Hinglish" and "Tanglish," heavy reliance on non-native, highly fragmented Romanized scripts may occasionally affect detection accuracy.
+
+## 🚀 Setup Instructions
+
+Clone the Repository: git clone https://github.com/manigade11/2care-voice-ai-agent.git
+
+Environment Setup: Create a .env file and add your OPENAI_API_KEY.
+
+Install Dependencies: pip install -r requirements.txt
+
+Run Server: uvicorn backend.main:app --reload
+
+Docker Deployment: Build and run the image:
+
+    docker build -t 2care-voice-agent 
+
+    docker run -d -p 8000:8000 2care-voice-agent
+
